@@ -1,0 +1,142 @@
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link
+        rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+        crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="../css/index.css" />
+    <link rel="stylesheet" href="../css/App.css" />
+    <link rel="stylesheet" href="../css/ThemedButton.css" />
+    <title>Shorty URLs</title>
+
+    <script>
+        $(document).ready(() => {
+            const afterShort = $(".after-short");
+            const loading = $(".loading");
+            const generateURL = $("#generateURL");
+            const copy = $("#copy");
+            const open = $("#open");
+            const rootEntry = $(".root-entry");
+            const res = $(".res");
+            const error = $(".error");
+            const success = $(".success");
+            const historyNav = $(".history-nav");
+
+            const makeURLValid = (url) => {
+                let temp = url;
+                if (temp.search("https://") === -1 && temp.search("http://") === -1) {
+                    const www_index = temp.search("www");
+                    if (www_index !== -1) {
+                        temp = temp.replace("www.", "");
+                    }
+                    return "https://" + temp;
+                }
+                return url;
+            };
+
+            afterShort.css("display", "none");
+            loading.css("display", "none");
+            res.css("display", "none");
+            success.css("display", "none");
+
+            generateURL.click(() => {
+                loading.css("display", "block");
+                generateURL.css("display", "none");
+                axios
+                    .post(
+                        "http://localhost:4000/generate_short_url",
+                        {
+                            url: makeURLValid(rootEntry.val()),
+                        },
+                        {
+                            headers: {
+                                Authorization: "05d5f47ab1314523bffef0e918afd3cb",
+                            },
+                        }
+                    )
+                    .then((val) => {
+                        res.text(val.data.short_url);
+                        afterShort.css("display", "flex").fadeIn();
+                    })
+                    .catch((e) => {
+                        console.log("error", e);
+                        if (e.response?.status === 409) {
+                            res.text(e.response.data.short_url);
+                            error.text("URL already exists").fadeIn();
+                            afterShort.css("display", "flex").fadeIn();
+                        } else {
+                            error.text("Unable to short this url. Try again.").fadeIn();
+                        }
+                    })
+                    .finally(() => {
+                        loading.css("display", "none");
+                        generateURL.css("display", "block");
+                        setTimeout(() => {
+                            error.text("").fadeOut();
+                        }, 2500);
+                    });
+            });
+
+            copy.click(() => {
+                navigator.clipboard.writeText(res.text());
+                success.text("Copied").fadeIn();
+                setTimeout(() => {
+                    success.text("").fadeOut();
+                }, 2500);
+            });
+
+            open.click(() => {
+                window.open(res.text(), "_blank");
+            });
+
+            historyNav.click(() => {
+                window.location.href = "history.html";
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <header>
+        <h1>Shorty URLs</h1>
+        <div class="nav">
+            <p class="history-nav">History</p>
+        </div>
+    </header>
+
+    <div class="body mainRoot">
+        <div class="mainbox">
+            <h1>Enter the URL</h1>
+            <input class="root-entry" placeholder="e.g. https://example.com" />
+            <p class="error"></p>
+            <div class="loading">
+                <div class="spinner-grow" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+            <button class="themed-btn" id="generateURL">Generate URL</button>
+
+            <div class="after-short">
+                <p class="root-entry res"></p>
+                <p class="success"></p>
+                <div class="row-buttons">
+                    <button class="themed-btn" id="copy">Copy</button>
+                    <button class="themed-btn" id="open">Open</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div>
+            Made with
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" color="red">
+                <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" />
+            </svg>
+            by Adarsh Mishra
+        </div>
+    </footer>
+</body>

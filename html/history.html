@@ -1,0 +1,280 @@
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link
+        rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+        crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="../css/index.css" />
+    <link rel="stylesheet" href="../css/App.css" />
+    <link rel="stylesheet" href="../css/ThemedButton.css" />
+    <link rel="stylesheet" href="../css/History.css" />
+    <link rel="stylesheet" href="../css/HistoryDetailsModal.css" />
+
+    <title>Shorty URLs</title>
+
+    <script>
+        $(document).ready(() => {
+            const loading = $(".loading-root");
+            const copyUrl = $("#copyURL");
+            const copyShortUrl = $("#copyShortURL");
+            const open = $("#openShortURL");
+            const close = $("#closebtn");
+            const rootEntry = $(".root-entry");
+            const res = $(".res");
+            const error = $(".error");
+            const noURLs = $(".no-urls");
+            const histories = $(".histories");
+            const historyTable = $(".all");
+            const modalRoot = $(".history-root");
+            const table = $(".history-table");
+            const homeNav = $(".home-nav");
+            const dataURL = $(".data-url");
+            const dataShortURL = $(".data-short-url");
+            const createdAt = $(".data-created-at");
+            const numOfVisits = $(".data-num-of-visits");
+            const mainboxFooter = $(".mainbox-footer");
+
+            noURLs.css("display", "none");
+            histories.css("display", "none");
+            modalRoot.css("display", "none");
+            mainboxFooter.css("display", "none");
+
+            function fetchHistory() {
+                error.text("");
+                loading.css("display", "block");
+                axios
+                    .get("http://localhost:4000/history", {
+                        headers: {
+                            Authorization: "05d5f47ab1314523bffef0e918afd3cb",
+                        },
+                    })
+                    .then((value) => {
+                        console.log("value", value.data.history);
+                        histories.css("display", "flex");
+                        loading.css("display", "none");
+                        let dataToSend = [];
+                        for (let i = 0; i < value.data.history.length; i++) {
+                            const { created_at } = value.data.history[i];
+                            const dateString = new Date(created_at);
+                            const created_at_date = dateString.getDate();
+                            const created_at_month = dateString.getMonth();
+                            const created_at_year = dateString.getFullYear();
+                            const created_at_hour = dateString.getHours();
+                            const created_at_min = dateString.getMinutes();
+
+                            dataToSend.push({
+                                ...value.data.history[i],
+                                created_at: `${created_at_date}/${created_at_month}/${created_at_year} - ${created_at_hour}:${created_at_min}`,
+                            });
+                        }
+                        if (dataToSend.length > 0) {
+                            dataToSend.forEach((data) => {
+                                historyTable.append(
+                                    `
+                                        <div class="table-row table-row-data" key={index} onclick='onHistoryRowClick(${JSON.stringify(data)})'>
+                                            <p class="column column1">${data.url}</p>
+                                            <span> | </span>
+                                            <p class="column column2">${data.short_url}</p>
+                                            <span> | </span>
+                                            <p class="column column3">${data.created_at}</p>
+                                            <span> | </span>
+                                            <p class="column column4">${data.num_of_visits}</p>
+                                        </div>
+                                    `
+                                );
+                            });
+                        } else {
+                            table.css("display", "none");
+                            noURLs.css("display", "block");
+                        }
+                    })
+                    .catch((e) => {
+                        console.log("error", e);
+                        error.text("Unable to fetch history.");
+                        mainboxFooter.css("display", "flex");
+                    })
+                    .finally(() => {
+                        loading.css("display", "none");
+                        setTimeout(() => {
+                            error.text("").fadeOut();
+                            mainboxFooter.css("display", "none");
+                        }, 2500);
+                    });
+            }
+
+            fetchHistory();
+
+            copyUrl.click(() => {
+                navigator.clipboard.writeText(dataURL.text());
+            });
+
+            copyShortUrl.click(() => {
+                navigator.clipboard.writeText(dataShortURL.text());
+            });
+
+            close.click(() => {
+                modalRoot.css("display", "none");
+            });
+
+            open.click(() => {
+                window.open(dataShortURL.text(), "_blank");
+            });
+
+            homeNav.click(() => {
+                window.location.href = "home.html";
+            });
+        });
+
+        function onHistoryRowClick(data) {
+            console.log(data);
+            const modalRoot = $(".history-root");
+            const locations = $(".locations");
+            const dataURL = $(".data-url");
+            const dataShortURL = $(".data-short-url");
+            const createdAt = $(".data-created-at");
+            const numOfVisits = $(".data-num-of-visits");
+            const modalTableData = $(".modal-table-data");
+            const modalNoURL = $(".modal-no-urls");
+
+            dataURL.text(data.url);
+            dataShortURL.text(data.short_url);
+            createdAt.text(data.created_at);
+            numOfVisits.text(data.num_of_visits);
+            if (!data.from_visited || data.from_visited?.length == 0) {
+                locations.css("display", "none");
+                modalNoURL.css("display", "block");
+            } else {
+                data.from_visited.forEach((value) => {
+                    const location = value.location
+                        ? `${value.location.city}, ${value.location.country}. ${value.location.zipCode}`
+                        : "Not Available";
+                    const dateString = new Date(value.requested_at);
+                    const requested_at_date = dateString.getDate();
+                    const requested_at_month = dateString.getMonth();
+                    const requested_at_year = dateString.getFullYear();
+                    const requested_at_hour = dateString.getHours();
+                    const requested_at_min = dateString.getMinutes();
+                    const requested_at_date_string = `${requested_at_date}/${requested_at_month}/${requested_at_year} - ${requested_at_hour}:${requested_at_min}`;
+
+                    modalTableData.append(`
+                        <div class="table-row" key={index}>
+                            <p class="column column1">${value.ip}</p>
+                            <span> | </span>
+                            <p class="column column2">${location}</p>
+                            <span> | </span>
+                            <p class="column column4">${requested_at_date_string}</p>
+                        </div>
+                    `);
+                });
+            }
+            modalRoot.css("display", "flex");
+        }
+    </script>
+</head>
+
+<body>
+    <header>
+        <h1>Shorty URLs</h1>
+        <div class="nav">
+            <p class="home-nav">Home</p>
+        </div>
+    </header>
+
+    <div class="body historyRoot">
+        <div style="margin: auto" class="loading-root">
+            <div class="historyBox mainbox" style="opacity: 0.7">
+                <h1>History</h1>
+                <div class="spinner-grow" role="status" style="color: 'white'; height: 75px; width: 75px">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <div style="margin: auto" class="histories">
+            <div class="historyBox mainbox histories">
+                <h1 style="margin-bottom: 10">History</h1>
+                <div class="history-table">
+                    <div class="table-row table-header">
+                        <p class="column column1 header-col">URL</p>
+                        <span> | </span>
+                        <p class="column column2 header-col">Short URL</p>
+                        <span> | </span>
+                        <p class="column column3 header-col">Created At</p>
+                        <span> | </span>
+                        <p class="column column4 header-col">Visits</p>
+                    </div>
+                    <div class="table-data-root all"></div>
+                    <div class="mainbox-footer">
+                        <div>
+                            <p class="error"></p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p class="no-urls">No URLs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="history-root">
+        <div class="history-root" style="z-index: 0"></div>
+        <!--close on click-->
+        <div class="history-mainbox mainbox">
+            <h1>Details</h1>
+            <div class="history-details">
+                <div>
+                    <label>URL :</label>
+                    <p class="data-url"><!-- data.url --></p>
+                    <button class="themed-btn modal-btn" id="copyURL">Copy</button>
+                </div>
+                <div>
+                    <label>Short URL :</label>
+                    <p class="data-short-url"><!--data.short_url--></p>
+                    <button class="themed-btn modal-btn" id="copyShortURL">Copy</button>
+                </div>
+                <div>
+                    <label>Created At :</label>
+                    <p class="data-created-at"><!--dataA--></p>
+                </div>
+                <div>
+                    <label>No. of Visits :</label>
+                    <p class="data-num-of-visits"><!--data.num_of_visits--></p>
+                </div>
+                <p class="success" style="align-self: center"></p>
+                <button class="themed-btn modal-btn" id="openShortURL">Open</button>
+            </div>
+            <div class="locations history-table">
+                <!--display none when no history-->
+                <h1>IP - Location</h1>
+                <div class="table-row table-header">
+                    <p class="column column1 header-col">IP</p>
+                    <span> | </span>
+                    <p class="column column2 header-col">Location</p>
+                    <span> | </span>
+                    <p class="column column4 header-col">Requested At</p>
+                </div>
+                <div class="table-data-root modal-table-data"></div>
+            </div>
+            <div>
+                <p class="no-urls modal-no-urls">Not visited yet</p>
+            </div>
+
+            <div class="footer">
+                <button class="themed-btn modal-btn" id="closebtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div>
+            Made with
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" color="red">
+                <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" />
+            </svg>
+            by Adarsh Mishra
+        </div>
+    </footer>
+</body>
